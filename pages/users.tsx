@@ -1,14 +1,16 @@
 import type { NextPage } from 'next'
 import DefaultLayout from '../components/Layout/DefaultLayout'
-import { getAllSales } from '../api/Sales'
-import { Progress, Box } from '@chakra-ui/react'
+import { getAllUsers } from '../api/Users'
 import { useQuery } from 'react-query'
-import React, { useEffect, useRef, useState } from 'react'
-import RWSalesTable from '../components/ReactWindowTable/RWSalesTable'
-import { Column, Table } from 'react-virtualized'
+import { Box, Center, Container, Progress } from '@chakra-ui/react'
+import { useRef, useState, useEffect } from 'react'
+import RWUsersTable from '../components/ReactWindowTable/RWUsersTable'
 
 const Home: NextPage = () => {
-  const { isLoading, data } = useQuery('sales', () => getAllSales())
+  const { isLoading, error, data } = useQuery('users', () => getAllUsers())
+  console.log(isLoading)
+  const [content, setContent] = useState(<></>)
+
   /**
    * Set value of react window using useRef of elemtent
    * react-window height "100%"" not working
@@ -28,15 +30,15 @@ const Home: NextPage = () => {
 
   return (
     <DefaultLayout
-      pageTitle="Sales Dashboard"
-      pageDescription="List of Sales Data"
-      pageName="Dashboard | Sales Data"
+      pageTitle="Users Data"
+      pageDescription="List of Users Data"
+      pageName="Dashboard | List of Users"
     >
       <Box ref={ref} w="full" h="full">
         {isLoading ? (
           <Progress h={500} w="full" colorScheme="cyan" isIndeterminate />
         ) : (
-          <RWSalesTable lists={data?.data.data} />
+          <RWUsersTable height={windowSize.height} data={data?.data.data} />
         )}
       </Box>
     </DefaultLayout>
