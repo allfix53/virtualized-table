@@ -1,5 +1,4 @@
 import { Table, Column, AutoSizer } from 'react-virtualized'
-import Draggable from 'react-draggable'
 import React, { useEffect, useRef, useState } from 'react'
 
 type Props = {
@@ -9,6 +8,8 @@ type Props = {
 }
 
 export default function RWSalesTable({ lists }: Props) {
+  const [w, setW] = useState(100)
+
   return (
     <React.Fragment>
       <AutoSizer>
@@ -22,7 +23,41 @@ export default function RWSalesTable({ lists }: Props) {
             rowGetter={({ index }) => lists[index]}
             style={{ fontFamily: 'monospace', fontSize: '1rem' }}
           >
-            <Column label="id" dataKey="id" width={100} />
+            <Column
+              label="id"
+              dataKey="id"
+              width={w}
+              headerRenderer={() => {
+                return (
+                  <>
+                    <div
+                      className="ReactVirtualized__Table__headerTruncatedText"
+                      style={{
+                        position: 'relative',
+                        width: 100,
+                      }}
+                    >
+                      id
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                        }}
+                        onDragOver={(e: any) => {
+                          console.log(e.clientX)
+                          setW(w + e.clientX)
+                        }}
+                        // onDragEnd
+                        draggable
+                      >
+                        ||
+                      </div>
+                    </div>
+                  </>
+                )
+              }}
+            />
             <Column label="name" dataKey="name" width={300} />
             <Column label="sales_id" dataKey="sales_id" width={300} />
             <Column label="item_id" dataKey="item_id" width={300} />

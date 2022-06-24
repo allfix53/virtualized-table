@@ -1,124 +1,98 @@
 import React from 'react'
-import { useState, useRef, useContext } from 'react'
-import { FixedSizeList, FixedSizeListProps } from 'react-window'
-import { render } from 'react-dom'
+import { Column, Table } from 'react-virtualized'
+import Draggable from 'react-draggable'
 
-/** Context for cross component communication */
-const VirtualTableContext = React.createContext<{
-  top: number
-  setTop: (top: number) => void
-  header: React.ReactNode
-  footer: React.ReactNode
-}>({
-  top: 0,
-  setTop: (value: number) => {},
-  header: <></>,
-  footer: <></>,
-})
+const TOTAL_WIDTH = 500
 
-/** The virtual table. It basically accepts all of the same params as the original FixedSizeList.*/
-function VirtualTable({
-  row,
-  header,
-  footer,
-  ...rest
-}: {
-  header?: React.ReactNode
-  footer?: React.ReactNode
-  row: FixedSizeListProps['children']
-} & Omit<FixedSizeListProps, 'children' | 'innerElementType'>) {
-  const listRef = useRef<FixedSizeList | null>()
-  const [top, setTop] = useState(0)
+export default class Demo extends React.Component {
+  state = {
+    widths: {
+      name: 0.33,
+      location: 0.33,
+      description: 0.33,
+    },
+  }
 
-  return (
-    <VirtualTableContext.Provider value={{ top, setTop, header, footer }}>
-      <FixedSizeList
-        {...rest}
-        innerElementType={Inner}
-        onItemsRendered={(props) => {
-          const style =
-            listRef.current &&
-            // @ts-ignore private method access
-            listRef.current._getItemStyle(props.overscanStartIndex)
-          setTop((style && style.top) || 0)
+  render() {
+    const { list } = this.props
+    const { widths } = this.state
 
-          // Call the original callback
-          rest.onItemsRendered && rest.onItemsRendered(props)
-        }}
-        ref={(el) => (listRef.current = el)}
-      >
-        {row}
-      </FixedSizeList>
-    </VirtualTableContext.Provider>
-  )
-}
-
-/** The Row component. This should be a table row, and noted that we don't use the style that regular `react-window` examples pass in.*/
-function Row({ index }: { index: number }) {
-  return (
-    <tr>
-      {/** Make sure your table rows are the same height as what you passed into the list... */}
-      <td style={{ height: '36px' }}>Row {index}</td>
-      <td>Col 2</td>
-      <td>Col 3</td>
-      <td>Col 4</td>
-      <td>Col 2</td>
-      <td>Col 3</td>
-      <td>Col 4</td>
-    </tr>
-  )
-}
-
-/**
- * The Inner component of the virtual list. This is the "Magic".
- * Capture what would have been the top elements position and apply it to the table.
- * Other than that, render an optional header and footer.
- **/
-const Inner = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDivElement>>(
-  function Inner({ children, ...rest }, ref) {
-    const { header, footer, top } = useContext(VirtualTableContext)
     return (
-      <div {...rest} ref={ref}>
-        <table style={{ top, position: 'absolute', width: '100%' }}>
-          {header}
-          <tbody>{children}</tbody>
-          {footer}
-        </table>
-      </div>
+      <Table
+        width={TOTAL_WIDTH}
+        height={300}
+        headerHeight={20}
+        rowHeight={30}
+        rowCount={list.length}
+        rowGetter={({ index }) => list[index]}
+      >
+        <Column
+          headerRenderer={this.headerRenderer}
+          dataKey="name"
+          label="Name"
+          width={widths.name * TOTAL_WIDTH}
+        />
+        <Column
+          headerRenderer={this.headerRenderer}
+          dataKey="location"
+          label="Location"
+          width={widths.location * TOTAL_WIDTH}
+        />
+        <Column
+          dataKey="description"
+          label="Description"
+          width={widths.description * TOTAL_WIDTH}
+        />
+      </Table>
     )
   }
-)
 
-/**
- * Render Our Example
- **/
-render(
-  <VirtualTable
-    height={300}
-    width="100%"
-    itemCount={1000}
-    itemSize={36}
-    header={
-      <thead>
-        <tr>
-          <th>Index</th>
-          <th>Header 2</th>
-          <th>Header 3</th>
-          <th>Header 4</th>
-        </tr>
-      </thead>
-    }
-    row={Row}
-    footer={
-      <tfoot>
-        <tr>
-          <td>Footer 1</td>
-          <td>Footer 2</td>
-          <td>Footer 3</td>
-          <td>Footer 4</td>
-        </tr>
-      </tfoot>
-    }
-  />,
-  document.querySelector('main')
-)
+  headerRenderer = ({
+    columnData,
+    dataKey,
+    disableSort,
+    label,
+    sortBy,
+    sortDirection,
+  }) => {
+    return (
+      <React.Fragment key={dataKey}>
+        <div className="ReactVirtualized__Table__headerTruncatedText">
+          {label}
+        </div>
+        <Draggable
+          axis="x"
+          defaultClassName="DragHandle"
+          defaultClassNameDragging="DragHandleActive"
+          onDrag={(event, { deltaX }) =>
+            this.resizeRow({
+              dataKey,
+              deltaX,
+            })
+          }
+          position={{ x: 0 }}
+          zIndex={999}
+        >
+          <span className="DragHandleIcon">⋮</span>
+        </Draggable>
+      </React.Fragment>
+    )
+  }
+
+  resizeRow = ({ dataKey, deltaX }) =>
+    this.setState((prevState) => {
+      const prevWidths = prevState.widths
+      const percentDelta = deltaX / TOTAL_WIDTH
+
+      // This is me being lazy :)
+      const nextDataKey = dataKey === 'name' ? 'location' : 'description'
+
+      return {
+        widths: {
+          ...prevWidths,
+          [dataKey]: prevWidths[dataKey] + percentDelta,
+          [nextDataKey]: prevWidths[nextDataKey] - percentDelta,
+        },
+      }
+    })
+}
